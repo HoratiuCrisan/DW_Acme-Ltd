@@ -1,0 +1,64 @@
+services:
+  cassandra:
+    image: cassandra:5.0
+    container_name: cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=financial_dw_cluster
+      - CASSANDRA_DC=datacenter1
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep -qE '^UN'"]
+      interval: 30s
+      timeout: 10s
+      retries: 15
+      start_period: 90s
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+
+  app:
+    build: .
+    container_name: dw_app
+    ports:
+      - "8080:8000"
+    env_file:
+      - .env
+    environment:
+      - CASSANDRA_HOSTS=cassandra
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    volumes:
+      - ./app/static:/app/app/static
+    depends_on:
+      cassandra:
+        condition: service_healthy
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  worker:
+    build: .
+    container_name: dw_worker
+    command: python -m app.worker.consumer
+    env_file:
+      - .env
+    environment:
+      - CASSANDRA_HOSTS=cassandra
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      cassandra:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  cassandra_data:

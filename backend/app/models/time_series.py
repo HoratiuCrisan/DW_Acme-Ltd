@@ -15,7 +15,7 @@ class TimeSeriesPoint(BaseModel):
     low_price: Decimal | None = None
     adj_close: Decimal | None = None
     volume: int | None = None
-    ex_divided: Decimal | None = None
-    split_ration: Decimal | None = None
+    ex_dividend: Decimal | None = None
+    split_ratio: Decimal | None = None
     extra_indicators: dict[str, str] = {}
     ingested_at: datetime

@@ -7,10 +7,10 @@ class Settings(BaseSettings):
     cassandra_dc: str = "datacenter1"
     cassandra_replication_strategy: str = "SimpleStrategy"
     cassandra_replication_factor: int = 1
-    nasdaq_api_key: str = ""
-    rabbitmq_url: str = ""
-    ollama_base_ur: str = ""
-    ollama_model: str = ""
+    nasdaq_api_key: str = "https://data.nasdaq.com/api/v3/datatables"
+    rabbitmq_url: str = "amqp://guest:guest@localhost:5672/"
+    ollama_base_ur: str = "http://localhost:11434"
+    ollama_model: str = "llama3.2"
 
     model_config = {"env_file": ".env"}
 

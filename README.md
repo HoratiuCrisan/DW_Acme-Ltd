@@ -2,6 +2,10 @@
 
 Financial data warehouse project for Acme Ltd. The system ingests market data from Nasdaq Data Link, stores historical time-series data in Cassandra, exposes REST APIs for consumers, runs analytics jobs with Spark, and provides an MCP endpoint for AI-agent access.
 
+## Demo Video
+
+[Watch the demo video](dw_project_demo_small.mp4)
+
 ## Architecture
 
 ```text

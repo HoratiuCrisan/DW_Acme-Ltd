@@ -35,6 +35,11 @@ class DataSourcePage(BaseModel):
     data_sources: list[dict[str, Any]]
 
 
+class DataPairPage(BaseModel):
+    page: Page
+    data_pairs: list[dict[str, Any]]
+
+
 class DataRecord(BaseModel):
     businessDate: date
     values: dict[str, Any]
@@ -57,6 +62,10 @@ def get_source_repo() -> DataSourceRepository:
 
 def get_ts_repo() -> TimeSeriesRepository:
     return TimeSeriesRepository(get_session())
+
+
+def get_db_session():
+    return get_session()
 
 
 @router.get("/assets", response_model=AssetPage)
@@ -146,6 +155,18 @@ def get_data_source(
     }
 
 
+@router.get("/data-pairs", response_model=DataPairPage)
+def list_data_pairs(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+    scan_limit: int = Query(default=5000, ge=1, le=50000),
+    session=Depends(get_db_session),
+):
+    pairs = _find_available_data_pairs(session, scan_limit)
+    selected, page = _page(pairs, offset, limit)
+    return {"page": page, "data_pairs": selected}
+
+
 @router.get("/data", response_model=DataResponse)
 def get_data(
     assetId: UUID,
@@ -224,6 +245,52 @@ def _dedupe_data_sources(items: list[Any]) -> list[Any]:
         if existing is None or item.created_at > existing.created_at:
             by_identity[key] = item
     return sorted(by_identity.values(), key=lambda item: item.source_name)
+
+
+def _find_available_data_pairs(session, scan_limit: int) -> list[dict[str, Any]]:
+    instrument_repo = InstrumentRepository(session)
+    source_repo = DataSourceRepository(session)
+    rows = session.execute(
+        f"""
+        SELECT instrument_id, source_id, record_year, record_date
+        FROM time_series_by_instrument
+        LIMIT {scan_limit}
+        """
+    )
+
+    by_pair: dict[tuple[UUID, UUID], dict[str, Any]] = {}
+    for row in rows:
+        key = (row.instrument_id, row.source_id)
+        pair = by_pair.get(key)
+        if pair is None:
+            pair = {
+                "assetId": str(row.instrument_id),
+                "dataSourceId": str(row.source_id),
+                "years": set(),
+                "sampleBusinessDate": row.record_date.isoformat() if hasattr(row.record_date, "isoformat") else str(row.record_date),
+            }
+            by_pair[key] = pair
+        pair["years"].add(row.record_year)
+
+    result = []
+    for (instrument_id, source_id), pair in by_pair.items():
+        instrument = instrument_repo.find_latest(instrument_id)
+        source = source_repo.find_latest(source_id)
+        if instrument is None or source is None:
+            continue
+        result.append({
+            "assetId": pair["assetId"],
+            "symbol": instrument.symbol,
+            "assetClass": instrument.instrument_class,
+            "region": instrument.region,
+            "dataSourceId": pair["dataSourceId"],
+            "dataSourceName": source.source_name,
+            "dataSourceType": source.source_type,
+            "years": sorted(pair["years"]),
+            "sampleBusinessDate": pair["sampleBusinessDate"],
+        })
+
+    return sorted(result, key=lambda item: (item["symbol"], item["dataSourceName"], item["assetId"]))
 
 
 def _latest_by_business_date(points) -> list[Any]:

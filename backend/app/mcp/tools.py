@@ -73,6 +73,11 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "inputSchema": PageArgs.model_json_schema(),
     },
     {
+        "name": "list_available_data_pairs",
+        "description": "Return assetId/dataSourceId combinations that are backed by actual time-series rows.",
+        "inputSchema": PageArgs.model_json_schema(),
+    },
+    {
         "name": "get_data_source_details",
         "description": "Return details for one dataSourceId UUID, including supported attributes when available.",
         "inputSchema": DataSourceDetailsArgs.model_json_schema(),
@@ -99,6 +104,9 @@ def execute_mcp_tool(name: str, arguments: dict[str, Any], session) -> dict[str,
         if name == "list_data_sources":
             args = _validate(PageArgs, arguments)
             return _list_data_sources(args, session)
+        if name == "list_available_data_pairs":
+            args = _validate(PageArgs, arguments)
+            return _list_available_data_pairs(args, session)
         if name == "get_data_source_details":
             args = _validate(DataSourceDetailsArgs, arguments)
             return _get_data_source_details(args, session)
@@ -183,6 +191,54 @@ def _list_data_sources(args: PageArgs, session) -> dict[str, Any]:
             for s in selected
         ],
     }
+
+
+def _list_available_data_pairs(args: PageArgs, session) -> dict[str, Any]:
+    instrument_repo = InstrumentRepository(session)
+    source_repo = DataSourceRepository(session)
+    rows = session.execute(
+        """
+        SELECT instrument_id, source_id, record_year, record_date
+        FROM time_series_by_instrument
+        LIMIT 5000
+        """
+    )
+
+    by_pair: dict[tuple[UUID, UUID], dict[str, Any]] = {}
+    for row in rows:
+        key = (row.instrument_id, row.source_id)
+        pair = by_pair.get(key)
+        if pair is None:
+            pair = {
+                "assetId": str(row.instrument_id),
+                "dataSourceId": str(row.source_id),
+                "years": set(),
+                "sampleBusinessDate": _serialize(row.record_date),
+            }
+            by_pair[key] = pair
+        pair["years"].add(row.record_year)
+
+    pairs = []
+    for (instrument_id, source_id), pair in by_pair.items():
+        instrument = instrument_repo.find_latest(instrument_id)
+        source = source_repo.find_latest(source_id)
+        if instrument is None or source is None:
+            continue
+        pairs.append({
+            "assetId": pair["assetId"],
+            "symbol": instrument.symbol,
+            "assetClass": instrument.instrument_class,
+            "region": instrument.region,
+            "dataSourceId": pair["dataSourceId"],
+            "dataSourceName": source.source_name,
+            "dataSourceType": source.source_type,
+            "years": sorted(pair["years"]),
+            "sampleBusinessDate": pair["sampleBusinessDate"],
+        })
+
+    pairs = sorted(pairs, key=lambda item: (item["symbol"], item["dataSourceName"], item["assetId"]))
+    selected, page = _page(pairs, args)
+    return {"page": page, "dataPairs": selected}
 
 
 def _get_data_source_details(args: DataSourceDetailsArgs, session) -> dict[str, Any]:

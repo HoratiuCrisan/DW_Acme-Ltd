@@ -1,6 +1,6 @@
 """
 Worker process: consumes ingestion jobs from RabbitMQ and runs the pipeline.
-Run with: python -m app.worker.consumer
+Run with: python -m app.worker.worker
 """
 import json
 import logging
@@ -48,6 +48,20 @@ def _build_pipeline(session) -> tuple[IngestionPipeline, IngestJobRepository]:
     )
     job_repo = IngestJobRepository(session)
     return pipeline, job_repo
+
+
+def run_completion_analytics(source_id: uuid.UUID) -> None:
+    if not settings.run_yearly_totals_on_ingest:
+        logger.info("Yearly totals trigger disabled; skipping post-ingestion Spark job")
+        return
+
+    from app.spark.analytics_jobs import create_spark_session, run_yearly_total_job
+
+    spark = create_spark_session(app_name="Acme Warehouse Yearly Totals Trigger")
+    try:
+        run_yearly_total_job(spark, source_id=str(source_id))
+    finally:
+        spark.stop()
 
 
 def process_job(body: bytes, session) -> None:
@@ -121,6 +135,13 @@ def process_job(body: bytes, session) -> None:
         error_message=error_msg,
     ))
     logger.info("Job %s for %s: %s (%d records)", job_id, symbol, status, record_count or 0)
+
+    if status == "completed" and record_count > 0:
+        try:
+            run_completion_analytics(source.source_id)
+            logger.info("Yearly totals Spark job completed after ingestion job %s", job_id)
+        except Exception as exc:
+            logger.warning("Yearly totals Spark job failed after ingestion job %s: %s", job_id, exc)
 
 
 def _connect_rabbitmq(retries: int = 10, delay: float = 3.0):

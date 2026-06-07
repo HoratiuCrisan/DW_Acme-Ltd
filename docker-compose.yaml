@@ -48,7 +48,7 @@ services:
   worker:
     build: .
     container_name: dw_worker
-    command: python -m app.worker.consumer
+    command: python -m app.worker.worker
     env_file:
       - .env
     environment:

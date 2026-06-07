@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.2"
     demo_mode: bool = False
+    run_yearly_totals_on_ingest: bool = True
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

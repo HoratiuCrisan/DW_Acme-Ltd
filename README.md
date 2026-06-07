@@ -4,7 +4,7 @@ Financial data warehouse project for Acme Ltd. The system ingests market data fr
 
 ## Demo Video
 
-[Watch the demo video](dw_project_demo.mp4)
+[Watch the demo video](dw_project_demo_small.mp4)
 
 ## Architecture
 

@@ -25,6 +25,19 @@ from app.models.ingest_job import IngestJob
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+INSTRUMENT_NAMESPACE = uuid.UUID("6a54878d-8c8f-4efb-91f3-7d0fd07377c1")
+DATA_SOURCE_NAMESPACE = uuid.UUID("d23cf43a-ecc1-4a7f-9f7a-5f7b39d8be11")
+
+
+def stable_instrument_id(symbol: str, instrument_class: str, region: str) -> uuid.UUID:
+    key = f"{instrument_class}:{region}:{symbol}".upper()
+    return uuid.uuid5(INSTRUMENT_NAMESPACE, key)
+
+
+def stable_source_id(source_name: str, source_type: str, base_url: str) -> uuid.UUID:
+    key = f"{source_name}:{source_type}:{base_url}".lower()
+    return uuid.uuid5(DATA_SOURCE_NAMESPACE, key)
+
 
 def _build_pipeline(session) -> tuple[IngestionPipeline, IngestJobRepository]:
     pipeline = IngestionPipeline(
@@ -61,7 +74,7 @@ def process_job(body: bytes, session) -> None:
     ))
 
     source = DataSource(
-        source_id=uuid.uuid4(),
+        source_id=stable_source_id("NASDAQ_WIKI", "rest", settings.nasdaq_base_url),
         source_name="NASDAQ_WIKI",
         source_type="rest",
         # Keep the stored source metadata aligned with the configured extractor URL.
@@ -71,7 +84,7 @@ def process_job(body: bytes, session) -> None:
         created_at=now,
     )
     instrument = FinancialInstrument(
-        instrument_id=uuid.uuid4(),
+        instrument_id=stable_instrument_id(symbol, instrument_class, region),
         symbol=symbol,
         instrument_class=instrument_class,
         name=symbol,

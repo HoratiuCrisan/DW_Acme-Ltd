@@ -1,13 +1,13 @@
 from uuid import UUID
 from typing import Iterable
-from cassandra.cluster import Session
+from typing import Any
 
 from app.db.repositories.base import CassandraRepository, WarehouseRepository
 from app.models.ingest_job import IngestJob
 
 
 class IngestJobRepository(CassandraRepository, WarehouseRepository[IngestJob, UUID]):
-    def __init__(self, session: Session):
+    def __init__(self, session: Any):
         super().__init__(session)
         self._insert = session.prepare(
             """

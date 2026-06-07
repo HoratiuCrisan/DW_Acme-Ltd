@@ -48,10 +48,11 @@ class NasdaqTransformer:
         source_id: UUID,
         ingested_at: datetime,
     ) -> TimeSeriesPoint:
+        row = {str(key).lower(): value for key, value in row.items()}
         try:
             record_date = date.fromisoformat(row["date"])
         except KeyError:
-            raise ValueError(f"Row is missing requried 'date' field: {row}")
+            raise ValueError(f"Row is missing required 'date' field: {row}")
         
         extra = {k: str(v) for k, v in row.items() if k not in _FIELD_MAP}
 

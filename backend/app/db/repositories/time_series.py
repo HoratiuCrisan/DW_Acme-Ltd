@@ -129,11 +129,15 @@ class TimeSeriesRepository(WarehouseRepository[TimeSeriesPoint, tuple]):
 
     @staticmethod
     def _row_to_model(row) -> TimeSeriesPoint:
+        record_date = row.record_date
+        if hasattr(record_date, "date"):
+            record_date = record_date.date()
+
         return TimeSeriesPoint(
             instrument_id=row.instrument_id,
             source_id=row.source_id,
             record_year=row.record_year,
-            record_date=row.record_date,
+            record_date=record_date,
             system_date=row.system_date,
             open_price=getattr(row, "open_price", None),
             close_price=getattr(row, "close_price", None),
@@ -143,6 +147,6 @@ class TimeSeriesRepository(WarehouseRepository[TimeSeriesPoint, tuple]):
             volume=getattr(row, "volume", None),
             ex_dividend=getattr(row, "ex_dividend", None),
             split_ratio=getattr(row, "split_ratio", None),
-            extra_indicators=getattr(row, "extra_indicators", None),
+            extra_indicators=getattr(row, "extra_indicators", None) or {},
             ingested_at=row.ingested_at,
         )

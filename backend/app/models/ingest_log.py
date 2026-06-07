@@ -7,6 +7,7 @@ class IngestLog(BaseModel):
     log_id: UUID
     ingested_at: datetime
     log_year: int = 0
+    instrument_id: UUID | None = None
     status: str
     record_count: int = 0
     error_message: str | None = None

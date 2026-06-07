@@ -6,6 +6,7 @@ class Recommendation(BaseModel):
     user_id: UUID
     created_at: datetime
     recommendation_id: UUID | None = None
+    portfolio_id: UUID | None = None
     signal_id: UUID | None = None
     action: str
     rationale: str | None = None

@@ -15,6 +15,7 @@ class Portfolio(BaseModel):
 class PortfolioAsset(BaseModel):
     portfolio_id: UUID
     instrument_id: UUID
+    added_at: datetime
     symbol: str
     instrument_class: str
     removed_at: datetime | None = None

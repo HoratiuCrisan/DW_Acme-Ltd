@@ -13,7 +13,7 @@ from uuid import UUID
 from app.assistant.client import OllamaClient
 from app.config import settings
 from app.db.connection import get_session
-from backend.app.db.repositories.llm_query_log import LLMQueryLogRepository
+from app.db.repositories.llm_query_log import LLMQueryLogRepository
 from app.models.llm_query_log import LLMQueryLog
 
 router = APIRouter()

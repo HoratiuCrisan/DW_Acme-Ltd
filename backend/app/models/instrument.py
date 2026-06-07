@@ -11,7 +11,7 @@ class FinancialInstrument(BaseModel):
     region: str
     currency: str
     description: str | None = None
-    created_at = datetime
+    created_at: datetime
 
 class InstrumentVersion(BaseModel):
     instrument_id: UUID

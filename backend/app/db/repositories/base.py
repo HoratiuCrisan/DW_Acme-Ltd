@@ -35,8 +35,8 @@ class CassandraRepository:
             return self._session.execute(statement)
         return self._session.execute(statement, params)
     
-    def _fetch_one(self, statement, params):
-        return self._execute(self, statement, params).one()
+    def _fetch_one(self, statement, params=None):
+        return self._execute(statement, params).one()
     
-    def _fetch_all(self, statement, params):
-        return self._execute(self, statement, params)
+    def _fetch_all(self, statement, params=None):
+        return self._execute(statement, params)

@@ -1,6 +1,6 @@
 import logging
 import re
-from cassandra.cluster import Session
+from typing import Any
 
 from app.config import settings
 
@@ -192,6 +192,43 @@ SCHEMA_STATEMENTS = [
     ) WITH CLUSTERING ORDER BY (computed_at DESC)
     """,
     """
+    CREATE TABLE IF NOT EXISTS yearly_totals (
+        instrument_id UUID,
+        source_id UUID,
+        record_year INT,
+        record_count BIGINT,
+        total_volume BIGINT,
+        avg_close DOUBLE,
+        computed_at TIMESTAMP,
+        PRIMARY KEY ((instrument_id, source_id), record_year)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS regression_data (
+        instrument_id UUID,
+        source_id UUID,
+        record_date DATE,
+        seconds BIGINT,
+        open DOUBLE,
+        close DOUBLE,
+        low DOUBLE,
+        high DOUBLE,
+        PRIMARY KEY ((instrument_id, source_id), record_date)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS regression_results (
+        instrument_id UUID,
+        source_id UUID,
+        record_date DATE,
+        seconds BIGINT,
+        open DOUBLE,
+        prediction DOUBLE,
+        computed_at TIMESTAMP,
+        PRIMARY KEY ((instrument_id, source_id), record_date)
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS risk_signals (
         instrument_id UUID,
         generated_at TIMESTAMP,
@@ -234,7 +271,7 @@ SCHEMA_STATEMENTS = [
 ]
 
 
-def apply_schema(session: Session, keyspace: str) -> None:
+def apply_schema(session: Any, keyspace: str) -> None:
     if not re.fullmatch(r"[a-zA-Z_][a-zA-Z0-9_]{0,47}", keyspace):
         raise ValueError(f"Invalid keyspace name: {keyspace!r}")
     session.execute(KEYSPACE_CQL.format(keyspace=keyspace, replication=_replication_cql()))
